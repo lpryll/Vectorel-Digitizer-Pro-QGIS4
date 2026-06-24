@@ -1,0 +1,33 @@
+[general]
+name=Vectorel Digitizer Pro
+qgisMinimumVersion=4.0
+qgisMaximumVersion=4.99
+description=Vectorel Digitizer Pro is a QGIS plugin for creating and editing vector features by entering, pasting or modifying numerical vertex coordinates. Includes a map-based polygon drawing tool with live area calculation. Also simultaneously converts coordinates according to CRS selection.
+version=2.0.5
+author=LPRYLL
+email=alperyolal@gmail.com
+about=Vectorel Digitizer Pro adds three tools to the QGIS vector editing toolbar. 1. Add By Coordinates: create new features by typing vertex coordinates with real-time area calculation. 2. Coordinate Editor: edit existing features numerically, with copy/paste and reprojection support and real-time area display. 3. Drawing Digitizer: draw polygons directly on the map canvas with an editable coordinate table and real-time area display. Supports Point, Line, Polygon, Multi-part and Z/M geometries. Coordinate reprojection on the fly.
+
+repository=https://github.com/lpryll/Vectorel-Digitizer-Pro-QGIS4
+tracker=https://github.com/lpryll/Vectorel-Digitizer-Pro-QGIS4/issues
+homepage=https://github.com/lpryll/Vectorel-Digitizer-Pro-QGIS4
+
+hasProcessingProvider=no
+tags=create,edit,numerical,coordinates,point,line,polygon,clipboard,multipart,reproject,digitize,vector,area
+experimental=False
+deprecated=False
+server=False
+icon=images/icon.svg
+category=Vector
+
+changelog=
+ 2.0.5 - Decimal precision of coordinates are fixed to 2 digits. Copy-Paste takes exact coordinate. Some other bugs fixed.
+ 2.0.4 - In The Drawing Digitizer tool, license coordinates sorted clockwise, beginning from the top-right corner.
+ 2.0.3 - The Drawing Digitizer tool snap feature enhanced, works more faster.
+ 2.0.2 - The Drawing Digitizer tool now resumes drawing if you undo after pressing the End key.
+ 2.0.1 - Drawing Digitizer tool coordinate calculation bug fixed.
+ 2.0.0 - QGIS 4 / Qt6 conversion. All Qt5 enums updated to Qt6 format. QAction moved to QtGui.
+ 1.0.3 - Drawing Digitizer tool snap feature added. Snapping bugs fixed.
+ 1.0.2 - Area calculation error in CRS: WGS84 corrected.
+ 1.0.1 - Vectorel Digitizer Pro: full UI modernisation, code quality fixes, renamed plugin and class, QGIS 3 / Qt5 stable release.
+ 1.0 - Drawing Digitizer tool added: map-based polygon drawing, editable coordinate table, dynamic area calculation, multi-part & ring area support.
