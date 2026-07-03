@@ -22,7 +22,7 @@ category=Vector
 
 changelog=
  2.0.5 - Decimal precision of coordinates are fixed to 2 digits. Copy-Paste takes exact coordinate. Some other bugs fixed.
- 2.0.4 - In The Drawing Digitizer tool, license coordinates sorted clockwise, beginning from the top-right corner.
+ 2.0.4 - In The Drawing Digitizer tool, license coordinates sorted clockwise, beginning from the top-left corner.
  2.0.3 - The Drawing Digitizer tool snap feature enhanced, works more faster.
  2.0.2 - The Drawing Digitizer tool now resumes drawing if you undo after pressing the End key.
  2.0.1 - Drawing Digitizer tool coordinate calculation bug fixed.
