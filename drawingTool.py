@@ -1,9 +1,17 @@
 from qgis.PyQt.QtCore import pyqtSignal, Qt, QTimer
 from qgis.PyQt.QtGui import QCursor, QPixmap, QColor
-from qgis.core import (QgsWkbTypes, QgsPointXY, Qgis,
-                        QgsSnappingConfig, QgsPointLocator,
-                        QgsProject, QgsTolerance, QgsRectangle,
-                        QgsVectorLayer, QgsFeatureRequest)
+from qgis.core import (
+    QgsWkbTypes,
+    QgsPointXY,
+    Qgis,
+    QgsSnappingConfig,
+    QgsPointLocator,
+    QgsProject,
+    QgsTolerance,
+    QgsRectangle,
+    QgsVectorLayer,
+    QgsFeatureRequest,
+)
 from qgis.gui import QgsMapTool, QgsMapToolPan, QgsRubberBand
 
 
@@ -14,7 +22,7 @@ class DrawingTool(QgsMapTool):
     mouseMoved = pyqtSignal(object)
     drawingEnded = pyqtSignal()
 
-    def __init__(self, canvas, geomType='polygon'):
+    def __init__(self, canvas, geomType="polygon"):
         super().__init__(canvas)
         self.canvas = canvas
         self.points = []
@@ -27,27 +35,27 @@ class DrawingTool(QgsMapTool):
         try:
             _point_geom = Qgis.GeometryType.Point
         except AttributeError:
-            _point_geom = QgsWkbTypes.PointGeometry
+            _point_geom = QgsWkbTypes.GeometryType.PointGeometry
 
         try:
             _line_geom = Qgis.GeometryType.Line
         except AttributeError:
-            _line_geom = QgsWkbTypes.LineGeometry
+            _line_geom = QgsWkbTypes.GeometryType.LineGeometry
 
         try:
             _poly_geom = Qgis.GeometryType.Polygon
         except AttributeError:
-            _poly_geom = QgsWkbTypes.PolygonGeometry
+            _poly_geom = QgsWkbTypes.GeometryType.PolygonGeometry
 
         self._point_geom = _point_geom
         self._line_geom = _line_geom
         self._poly_geom = _poly_geom
 
-        if self.geomType == 'point':
+        if self.geomType == "point":
             self.rubberBand = QgsRubberBand(self.canvas, _point_geom)
-            self.rubberBand.setIcon(QgsRubberBand.ICON_CIRCLE)
+            self.rubberBand.setIcon(QgsRubberBand.IconType.ICON_CIRCLE)
             self.rubberBand.setIconSize(12)
-        elif self.geomType == 'line':
+        elif self.geomType == "line":
             self.rubberBand = QgsRubberBand(self.canvas, _line_geom)
         else:
             self.rubberBand = QgsRubberBand(self.canvas, _poly_geom)
@@ -55,23 +63,20 @@ class DrawingTool(QgsMapTool):
         self.rubberBand.setFillColor(QColor(0, 180, 0, 40))
         self.rubberBand.setWidth(2)
 
-        icon_type = (QgsRubberBand.ICON_FULL_DIAMOND
-                     if hasattr(QgsRubberBand, 'ICON_FULL_DIAMOND')
-                     else QgsRubberBand.IconType.ICON_FULL_DIAMOND)
-        self.vertexBand = QgsRubberBand(self.canvas, QgsWkbTypes.PointGeometry)
+        icon_type = QgsRubberBand.IconType.ICON_FULL_DIAMOND
+        self.vertexBand = QgsRubberBand(self.canvas, _point_geom)
         self.vertexBand.setIcon(icon_type)
         self.vertexBand.setColor(Qt.GlobalColor.darkGreen)
         self.vertexBand.setIconSize(10)
 
-        box_icon = (QgsRubberBand.ICON_FULL_BOX
-                    if hasattr(QgsRubberBand, 'ICON_FULL_BOX')
-                    else QgsRubberBand.IconType.ICON_FULL_BOX)
-        self.highlightBand = QgsRubberBand(self.canvas, QgsWkbTypes.PointGeometry)
+        box_icon = QgsRubberBand.IconType.ICON_FULL_BOX
+        self.highlightBand = QgsRubberBand(self.canvas, _point_geom)
         self.highlightBand.setIcon(box_icon)
         self.highlightBand.setColor(Qt.GlobalColor.red)
         self.highlightBand.setIconSize(12)
         self.highlightBand.hide()
         self._highlightedIndex = -1
+        self._extraSnapParts = []
 
         self._moveTimer = QTimer()
         self._moveTimer.setSingleShot(True)
@@ -79,51 +84,93 @@ class DrawingTool(QgsMapTool):
         self._moveTimer.timeout.connect(self._processDeferredMove)
         self._pendingMovePos = None
 
-        self.cursor = QCursor(QPixmap(["16 16 3 1",
-                                         "      c None",
-                                         ".     c #CC4C2F",
-                                         "+     c #FFFFFF",
-                                         "                ",
-                                         "  ..           ",
-                                         " .+..          ",
-                                         " .++..         ",
-                                         " .+++..        ",
-                                         "  .++++..      ",
-                                         "  .+++++..     ",
-                                         "   .++++++..   ",
-                                         "   .+++++++..  ",
-                                         "    .++++++++. ",
-                                         "    .+++..     ",
-                                         "     .++.      ",
-                                         "     .+.       ",
-                                         "      ..       ",
-                                         "                ",
-                                         "                "]))
+        self.cursor = QCursor(
+            QPixmap(
+                [
+                    "16 16 3 1",
+                    "      c None",
+                    ".     c #CC4C2F",
+                    "+     c #FFFFFF",
+                    "                ",
+                    "  ..           ",
+                    " .+..          ",
+                    " .++..         ",
+                    " .+++..        ",
+                    "  .++++..      ",
+                    "  .+++++..     ",
+                    "   .++++++..   ",
+                    "   .+++++++..  ",
+                    "    .++++++++. ",
+                    "    .+++..     ",
+                    "     .++.      ",
+                    "     .+.       ",
+                    "      ..       ",
+                    "                ",
+                    "                ",
+                ]
+            )
+        )
 
     def _minPoints(self):
-        if self.geomType == 'point':
+        if self.geomType == "point":
             return 1
-        elif self.geomType == 'line':
+        elif self.geomType == "line":
             return 2
         return 3
+
+    @staticmethod
+    def _closestPointOnSegment(p, a, b):
+        dx, dy = b.x() - a.x(), b.y() - a.y()
+        length_sq = dx * dx + dy * dy
+        if length_sq == 0:
+            return a
+        t = ((p.x() - a.x()) * dx + (p.y() - a.y()) * dy) / length_sq
+        t = max(0.0, min(1.0, t))
+        return QgsPointXY(a.x() + t * dx, a.y() + t * dy)
 
     def _snapPoint(self, mapPoint, skipSnap=False):
         if skipSnap:
             return mapPoint
-        try:
-            snapUtils = self.canvas.snappingUtils()
-            result = snapUtils.snapToMap(
-                mapPoint, None,
-                QgsPointLocator.Vertex | QgsPointLocator.Edge)
-            if result.isValid():
-                return result.point()
-        except Exception:
-            pass
-        try:
-            return self._manualSnap(mapPoint)
-        except Exception:
-            pass
-        return mapPoint
+
+        bestDist = float("inf")
+        bestPoint = None
+        pixelTolerance = 8
+        mapTolerance = pixelTolerance * self.canvas.mapUnitsPerPixel()
+
+        # Check extra snap parts for vertex and edge snapping
+        for part_pts in self._extraSnapParts:
+            for i, pt in enumerate(part_pts):
+                d = mapPoint.distance(pt)
+                if d < mapTolerance and d < bestDist:
+                    bestDist = d
+                    bestPoint = pt
+            if len(part_pts) >= 2:
+                for i in range(len(part_pts) - 1):
+                    closest = self._closestPointOnSegment(
+                        mapPoint, part_pts[i], part_pts[i + 1]
+                    )
+                    d = mapPoint.distance(closest)
+                    if d < mapTolerance and d < bestDist:
+                        bestDist = d
+                        bestPoint = closest
+
+        snapUtils = self.canvas.snappingUtils()
+        if snapUtils:
+            try:
+                result = snapUtils.snapToMap(
+                    mapPoint, None, QgsPointLocator.Type.Vertex | QgsPointLocator.Type.Edge
+                )
+                if result.isValid():
+                    d = mapPoint.distance(result.point())
+                    if d < bestDist:
+                        return result.point()
+            except (TypeError, RuntimeError):
+                pass
+
+        if bestPoint is not None:
+            return bestPoint
+
+        return self._manualSnap(mapPoint)
 
     def _manualSnap(self, mapPoint):
         pixelTolerance = 8
@@ -134,7 +181,8 @@ class DrawingTool(QgsMapTool):
             mapPoint.x() - mapTolerance,
             mapPoint.y() - mapTolerance,
             mapPoint.x() + mapTolerance,
-            mapPoint.y() + mapTolerance)
+            mapPoint.y() + mapTolerance,
+        )
         for layer in self.canvas.layers():
             if not isinstance(layer, QgsVectorLayer):
                 continue
@@ -181,7 +229,7 @@ class DrawingTool(QgsMapTool):
         if self._panTool is not None:
             try:
                 self._panTool.panningFinished.disconnect(self._endPan)
-            except Exception:
+            except TypeError:
                 pass
             self._panTool = None
         self.canvas.setMapTool(self)
@@ -191,7 +239,7 @@ class DrawingTool(QgsMapTool):
             self.endDrawing()
 
     def canvasMoveEvent(self, e):
-        if self.geomType == 'point':
+        if self.geomType == "point":
             return
         if self.isDrawing and len(self.points) > 0:
             pos = self.toMapCoordinates(e.pos())
@@ -218,12 +266,12 @@ class DrawingTool(QgsMapTool):
 
     def setHighlightedVertex(self, index):
         self._highlightedIndex = index
-        if self.geomType == 'point':
+        if self.geomType == "point":
             self.highlightBand.hide()
             self.canvas.refresh()
             return
         if 0 <= index < len(self.points):
-            self.highlightBand.reset(QgsWkbTypes.PointGeometry)
+            self.highlightBand.reset(self._point_geom)
             self.highlightBand.addPoint(self.points[index])
             self.highlightBand.show()
         else:
@@ -236,10 +284,10 @@ class DrawingTool(QgsMapTool):
         self.canvas.refresh()
 
     def updateRubberBand(self):
-        if self.geomType == 'point':
+        if self.geomType == "point":
             self.rubberBand.reset(self._point_geom)
-            self.vertexBand.reset(QgsWkbTypes.PointGeometry)
-            self.highlightBand.reset(QgsWkbTypes.PointGeometry)
+            self.vertexBand.reset(self._point_geom)
+            self.highlightBand.reset(self._point_geom)
             self.highlightBand.hide()
             self._highlightedIndex = -1
             if self.points:
@@ -249,9 +297,15 @@ class DrawingTool(QgsMapTool):
                 self.rubberBand.hide()
             self.canvas.refresh()
             return
-        elif self.geomType == 'line':
+        elif self.geomType == "line":
             self.rubberBand.reset(self._line_geom)
-            self.vertexBand.reset(QgsWkbTypes.PointGeometry)
+            self.vertexBand.reset(self._point_geom)
+            if not self.points:
+                self.rubberBand.hide()
+                self.vertexBand.hide()
+                self.highlightBand.hide()
+                self.canvas.refresh()
+                return
             for pt in self.points:
                 self.rubberBand.addPoint(pt, False)
             self.rubberBand.addPoint(self.points[-1], False)
@@ -260,7 +314,13 @@ class DrawingTool(QgsMapTool):
             self.vertexBand.show()
         else:
             self.rubberBand.reset(self._poly_geom)
-            self.vertexBand.reset(QgsWkbTypes.PointGeometry)
+            self.vertexBand.reset(self._point_geom)
+            if not self.points:
+                self.rubberBand.hide()
+                self.vertexBand.hide()
+                self.highlightBand.hide()
+                self.canvas.refresh()
+                return
             for pt in self.points:
                 self.rubberBand.addPoint(pt, False)
             self.rubberBand.addPoint(self.points[-1], False)
@@ -271,7 +331,7 @@ class DrawingTool(QgsMapTool):
             self.vertexBand.show()
 
         if 0 <= self._highlightedIndex < len(self.points):
-            self.highlightBand.reset(QgsWkbTypes.PointGeometry)
+            self.highlightBand.reset(self._point_geom)
             self.highlightBand.addPoint(self.points[self._highlightedIndex])
             self.highlightBand.show()
         else:
@@ -314,14 +374,14 @@ class DrawingTool(QgsMapTool):
         self.canceled.emit()
 
     def resetRubberBand(self):
-        if self.geomType == 'point':
+        if self.geomType == "point":
             self.rubberBand.reset(self._point_geom)
-        elif self.geomType == 'line':
+        elif self.geomType == "line":
             self.rubberBand.reset(self._line_geom)
         else:
             self.rubberBand.reset(self._poly_geom)
-        self.vertexBand.reset(QgsWkbTypes.PointGeometry)
-        self.highlightBand.reset(QgsWkbTypes.PointGeometry)
+        self.vertexBand.reset(self._point_geom)
+        self.highlightBand.reset(self._point_geom)
         self.rubberBand.hide()
         self.vertexBand.hide()
         self.highlightBand.hide()
@@ -349,32 +409,22 @@ class DrawingTool(QgsMapTool):
         proj = QgsProject.instance()
         self._origSnapConfig = proj.snappingConfig()
         cfg = QgsSnappingConfig(self._origSnapConfig)
-        cfg.setMode(QgsSnappingConfig.AllLayers)
+        cfg.setMode(QgsSnappingConfig.SnappingMode.AllLayers)
         cfg.setTolerance(8)
-        cfg.setUnits(QgsTolerance.Pixels)
-        for attr in ('setSnapType', 'setType'):
-            if hasattr(cfg, attr):
-                for val in (QgsSnappingConfig.VertexAndSegment, 3):
-                    try:
-                        getattr(cfg, attr)(val)
-                        break
-                    except Exception:
-                        pass
-                break
+        cfg.setUnits(QgsTolerance.UnitType.Pixels)
+        if hasattr(cfg, "setSnapType"):
+            cfg.setSnapType(QgsSnappingConfig.SnappingType.VertexAndSegment)
+        elif hasattr(cfg, "setType"):
+            cfg.setType(QgsSnappingConfig.SnappingType.VertexAndSegment)
         proj.setSnappingConfig(cfg)
-        try:
-            snapUtils = self.canvas.snappingUtils()
-            for attr in ('setConfig', 'setConfigMode', 'readConfigFromProject',
-                         'readFromProject'):
-                if hasattr(snapUtils, attr):
-                    try:
-                        fn = getattr(snapUtils, attr)
-                        fn(cfg) if attr in ('setConfig',) else fn()
-                        break
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+        snapUtils = self.canvas.snappingUtils()
+        if snapUtils is not None:
+            if hasattr(snapUtils, "setConfig"):
+                snapUtils.setConfig(cfg)
+            elif hasattr(snapUtils, "readConfigFromProject"):
+                snapUtils.readConfigFromProject()
+            elif hasattr(snapUtils, "readFromProject"):
+                snapUtils.readFromProject()
 
     def _restoreSnapping(self):
         if self._origSnapConfig is not None:
@@ -387,3 +437,6 @@ class DrawingTool(QgsMapTool):
 
     def getPoints(self):
         return list(self.points)
+
+    def setExtraSnapParts(self, parts):
+        self._extraSnapParts = [list(p) for p in parts]

@@ -4,12 +4,23 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QUrl
 from qgis.PyQt.QtGui import QIcon, QAction
 from qgis.PyQt.QtWidgets import QMessageBox
-from qgis.core import (QgsWkbTypes, QgsGeometry, QgsFeature, QgsMapLayer,
-                       QgsPoint, Qgis, QgsMultiPoint, QgsMultiLineString,
-                       QgsLineString, QgsMultiPolygon, QgsPolygon, QgsPointXY,
-                       QgsApplication, QgsFeatureRequest, QgsVectorLayerUtils)
+from qgis.core import (
+    QgsWkbTypes,
+    QgsGeometry,
+    QgsMapLayer,
+    Qgis,
+    QgsMultiPoint,
+    QgsMultiLineString,
+    QgsLineString,
+    QgsMultiPolygon,
+    QgsPolygon,
+    QgsPointXY,
+    QgsApplication,
+    QgsFeatureRequest,
+    QgsVectorLayerUtils,
+)
 
-from .resources import *
+from . import resources  # noqa: F401
 from .addFeatureGUI import AddFeatureGUI
 from .chooseFeatureGUI import ChooseFeatureGUI
 from .featureFinderTool import FeatureFinderTool
@@ -24,13 +35,13 @@ import webbrowser
 # QGIS 3 / Qt5 geometry type constants (with QGIS 4 / Qt6 forward-compat)
 # ---------------------------------------------------------------------------
 try:
-    _PointGeometry   = Qgis.GeometryType.Point
-    _LineGeometry    = Qgis.GeometryType.Line
+    _PointGeometry = Qgis.GeometryType.Point
+    _LineGeometry = Qgis.GeometryType.Line
     _PolygonGeometry = Qgis.GeometryType.Polygon
 except AttributeError:
-    _PointGeometry   = QgsWkbTypes.PointGeometry
-    _LineGeometry    = QgsWkbTypes.LineGeometry
-    _PolygonGeometry = QgsWkbTypes.PolygonGeometry
+    _PointGeometry = QgsWkbTypes.GeometryType.PointGeometry
+    _LineGeometry = QgsWkbTypes.GeometryType.LineGeometry
+    _PolygonGeometry = QgsWkbTypes.GeometryType.PolygonGeometry
 
 
 class VectorelDigitizerPro:
@@ -46,10 +57,10 @@ class VectorelDigitizerPro:
         self.plugin_dir = os.path.dirname(__file__)
 
         # Locale / translation
-        locale = QSettings().value('locale/userLocale')[0:2]
+        locale = QSettings().value("locale/userLocale")[0:2]
         locale_path = os.path.join(
-            self.plugin_dir, 'i18n',
-            'numericalDigitize_{}.qm'.format(locale))
+            self.plugin_dir, "i18n", "numericalDigitize_{}.qm".format(locale)
+        )
         if os.path.exists(locale_path):
             self.translator = QTranslator()
             self.translator.load(locale_path)
@@ -57,76 +68,82 @@ class VectorelDigitizerPro:
 
         # Instance attributes
         self.actions = []
-        self.menu = self.tr('&Vectorel Digitizer Pro')
-        self.first_start      = None
+        self.menu = self.tr("&Vectorel Digitizer Pro")
+        self.first_start = None
         self.first_start_edit = None
         self.CRS = None
 
         self.canvas = self.iface.mapCanvas()
-        self.EditFeatureMapTool  = None
-        self.prevMapTool         = None
+        self.EditFeatureMapTool = None
+        self.prevMapTool = None
 
-        self.__dlg         = None
-        self.__dlgEdit     = None
-        self.__dlgChooser  = None
-        self.__dlgDraw     = None
-        self.__drawTool    = None
+        self.__dlg = None
+        self.__dlgEdit = None
+        self.__dlgChooser = None
+        self.__dlgDraw = None
+        self.__drawTool = None
 
-        self.__layer             = None
+        self.__layer = None
         self.__layergeometryType = None
-        self.__layerwkbType      = None
-        self.__hasZ              = False
-        self.__hasM              = False
-        self.__isMultiType       = False
-        self.__isEditMode        = False
+        self.__layerwkbType = None
+        self.__hasZ = False
+        self.__hasM = False
+        self.__isMultiType = False
+        self.__isEditMode = False
 
     # ------------------------------------------------------------------
     # Translation helper
     # ------------------------------------------------------------------
     @staticmethod
     def tr(message):
-        return QCoreApplication.translate('VectorelDigitizerPro', message)
+        return QCoreApplication.translate("VectorelDigitizerPro", message)
 
     # ------------------------------------------------------------------
     # GUI setup / teardown
     # ------------------------------------------------------------------
     def initGui(self):
         """Create menu entries and toolbar icons."""
-        icon = QIcon(self.plugin_dir + '/images/icon.svg')
-        action = QAction(icon, self.tr('Add By Coordinates'), self.iface.mainWindow())
+        icon = QIcon(self.plugin_dir + "/images/icon.svg")
+        action = QAction(icon, self.tr("Add By Coordinates"), self.iface.mainWindow())
         action.triggered.connect(self.run)
         action.setEnabled(False)
-        action.setWhatsThis(self.tr('Add By Coordinates – enter vertex coordinates from keyboard'))
+        action.setWhatsThis(
+            self.tr("Add By Coordinates – enter vertex coordinates from keyboard")
+        )
         self.iface.digitizeToolBar().addAction(action)
         self.iface.addPluginToVectorMenu(self.menu, action)
         self.actions.append(action)
 
-        icon = QIcon(self.plugin_dir + '/images/icon-edit.svg')
-        action = QAction(icon, self.tr('Coordinate Editor'), self.iface.mainWindow())
+        icon = QIcon(self.plugin_dir + "/images/icon-edit.svg")
+        action = QAction(icon, self.tr("Coordinate Editor"), self.iface.mainWindow())
         action.triggered.connect(self.runEdit)
         action.setEnabled(False)
-        action.setWhatsThis(self.tr('Coordinate Editor – edit existing feature coordinates'))
+        action.setWhatsThis(
+            self.tr("Coordinate Editor – edit existing feature coordinates")
+        )
         self.iface.digitizeToolBar().addAction(action)
         self.iface.addPluginToVectorMenu(self.menu, action)
         self.actions.append(action)
 
-        icon = QIcon(self.plugin_dir + '/images/icon-draw.svg')
-        action = QAction(icon, self.tr('Drawing Digitizer'), self.iface.mainWindow())
+        icon = QIcon(self.plugin_dir + "/images/icon-draw.svg")
+        action = QAction(icon, self.tr("Drawing Digitizer"), self.iface.mainWindow())
         action.triggered.connect(self.runDrawing)
         action.setEnabled(False)
         action.setCheckable(True)
-        action.setWhatsThis(self.tr('Drawing Digitizer – draw point, line or polygon on the map canvas'))
+        action.setWhatsThis(
+            self.tr("Drawing Digitizer – draw point, line or polygon on the map canvas")
+        )
         self.iface.digitizeToolBar().addAction(action)
         self.iface.addPluginToVectorMenu(self.menu, action)
         self.actions.append(action)
 
-        icon = QIcon(self.plugin_dir + '/images/mActionHelpContents.svg')
-        action = QAction(icon, self.tr('Help'), self.iface.mainWindow())
+        icon = QIcon(self.plugin_dir + "/images/mActionHelpContents.svg")
+        action = QAction(icon, self.tr("Help"), self.iface.mainWindow())
         action.triggered.connect(self.help)
         self.iface.addPluginToVectorMenu(self.menu, action)
         self.actions.append(action)
 
-        self.first_start      = True
+        self.first_start = True
         self.first_start_edit = True
 
         self.canvas.currentLayerChanged.connect(self.toggle)
@@ -136,15 +153,17 @@ class VectorelDigitizerPro:
     def unload(self):
         """Remove plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
-            self.iface.removePluginVectorMenu(self.tr('&Vectorel Digitizer Pro'), action)
+            self.iface.removePluginVectorMenu(
+                self.tr("&Vectorel Digitizer Pro"), action
+            )
             self.iface.digitizeToolBar().removeAction(action)
         try:
             self.canvas.currentLayerChanged.disconnect(self.toggle)
-        except Exception:
+        except TypeError:
             pass
         try:
             self.canvas.mapToolSet.disconnect(self.deactivate)
-        except Exception:
+        except TypeError:
             pass
 
     # ------------------------------------------------------------------
@@ -152,10 +171,10 @@ class VectorelDigitizerPro:
     # ------------------------------------------------------------------
     def __setlayerproperties(self):
         self.__layergeometryType = self.__layer.geometryType()
-        self.__layerwkbType      = self.__layer.wkbType()
-        self.__hasZ              = QgsWkbTypes.hasZ(self.__layerwkbType)
-        self.__hasM              = QgsWkbTypes.hasM(self.__layerwkbType)
-        self.__isMultiType       = QgsWkbTypes.isMultiType(self.__layerwkbType)
+        self.__layerwkbType = self.__layer.wkbType()
+        self.__hasZ = QgsWkbTypes.hasZ(self.__layerwkbType)
+        self.__hasM = QgsWkbTypes.hasM(self.__layerwkbType)
+        self.__isMultiType = QgsWkbTypes.isMultiType(self.__layerwkbType)
 
     # ------------------------------------------------------------------
     # Tool entry points
@@ -169,14 +188,18 @@ class VectorelDigitizerPro:
                 self.__dlg.returnCoordList.connect(self.createGeom)
                 self.__dlg.selectedCRS.connect(self.doTransformFromCrs)
                 self.__dlg.configureSignals()
-                self.__dlg.setWindowTitle(self.tr('Vectorel Digitizer Pro – Add Feature'))
+                self.__dlg.setWindowTitle(
+                    self.tr("Vectorel Digitizer Pro – Add Feature")
+                )
             except Exception:
                 import traceback
-                self.__dlg       = None
+
+                self.__dlg = None
                 self.first_start = True
                 self.iface.messageBar().pushCritical(
-                    'VectorelDigitizerPro',
-                    'Dialog init error: ' + traceback.format_exc())
+                    "VectorelDigitizerPro",
+                    "Dialog init error: " + traceback.format_exc(),
+                )
                 return
 
         if self.__dlg is None:
@@ -186,15 +209,20 @@ class VectorelDigitizerPro:
         self.__isEditMode = False
         self.__dlg.clearControls()
         self.__dlg.configureDialog(
-            self.__layergeometryType, self.__layerwkbType,
-            self.__isMultiType, self.__hasZ, self.__hasM,
-            self.__isEditMode, self.canvas)
+            self.__layergeometryType,
+            self.__layerwkbType,
+            self.__isMultiType,
+            self.__hasZ,
+            self.__hasM,
+            self.__isEditMode,
+            self.canvas,
+        )
         self.__dlg.show()
 
     def runEdit(self):
         """Activate the feature-selector map tool to pick a feature for editing."""
         self.__isEditMode = True
-        self.prevMapTool  = self.canvas.mapTool()
+        self.prevMapTool = self.canvas.mapTool()
         self.EditFeatureMapTool = FeatureFinderTool(self.canvas)
         self.EditFeatureMapTool.Clicked.connect(self.EditFeature)
         self.canvas.setMapTool(self.EditFeatureMapTool)
@@ -209,11 +237,11 @@ class VectorelDigitizerPro:
         self.__setlayerproperties()
 
         if self.__layergeometryType == _PointGeometry:
-            geomType = 'point'
+            geomType = "point"
         elif self.__layergeometryType == _LineGeometry:
-            geomType = 'line'
+            geomType = "line"
         else:
-            geomType = 'polygon'
+            geomType = "polygon"
 
         if self.__dlgDraw is None:
             self.__dlgDraw = DrawingDigitizerGUI(self.iface.mainWindow())
@@ -230,26 +258,27 @@ class VectorelDigitizerPro:
         self.__dlgDraw.clearPoints()
         self.__dlgDraw.show()
 
-        try:
-            self.__drawTool.pointAdded.disconnect(self._drawPointAdded)
-        except Exception:
-            pass
-        try:
-            self.__drawTool.mouseMoved.disconnect(self._onMouseMoved)
-        except Exception:
-            pass
-        try:
-            self.__drawTool.drawingFinished.disconnect(self._onDrawingFinished)
-        except Exception:
-            pass
-        try:
-            self.__drawTool.drawingEnded.disconnect(self._onToolEndDrawing)
-        except Exception:
-            pass
-        try:
-            self.__drawTool.canceled.disconnect(self._onDrawingCanceled)
-        except Exception:
-            pass
+        if self.__drawTool is not None:
+            try:
+                self.__drawTool.pointAdded.disconnect(self._drawPointAdded)
+            except TypeError:
+                pass
+            try:
+                self.__drawTool.mouseMoved.disconnect(self._onMouseMoved)
+            except TypeError:
+                pass
+            try:
+                self.__drawTool.drawingFinished.disconnect(self._onDrawingFinished)
+            except TypeError:
+                pass
+            try:
+                self.__drawTool.drawingEnded.disconnect(self._onToolEndDrawing)
+            except TypeError:
+                pass
+            try:
+                self.__drawTool.canceled.disconnect(self._onDrawingCanceled)
+            except TypeError:
+                pass
 
         self.__drawTool = DrawingTool(self.canvas, geomType=geomType)
         self.__dlgDraw.drawTool = self.__drawTool
@@ -261,7 +290,7 @@ class VectorelDigitizerPro:
 
         try:
             self.__dlgDraw.rejected.disconnect(self._onDrawingCanceled)
-        except Exception:
+        except TypeError:
             pass
         self.__dlgDraw.rejected.connect(self._onDrawingCanceled)
 
@@ -279,28 +308,38 @@ class VectorelDigitizerPro:
         if self.__dlgDraw is not None:
             self.__dlgDraw.setPreviewPoint(point)
 
-    def _onDialogFinish(self, points):
+    def _onDialogFinish(self, parts):
         if self.__dlgDraw is None:
             return
 
         geomType = self.__dlgDraw.geomType
         minPoints = self.__dlgDraw._minPoints()
 
-        if len(points) < minPoints:
+        total_points = sum(len(pts) for _, pts in parts)
+        if total_points < minPoints:
             return
+
+        # Save parts before clearing
+        saved_parts = [[p[0], list(p[1])] for p in parts]
 
         self.__dlgDraw.clearPoints()
         if self.__drawTool is not None:
             self.__drawTool.clear()
 
-        if geomType == 'point':
-            self._createPointFromClick(points[0])
+        if geomType == "point":
+            for _, pts in saved_parts:
+                if pts:
+                    self._createPointFromClick(pts[0])
+                    break
             self.canvas.setMapTool(self.__drawTool)
-        elif geomType == 'line':
-            self._createLineFromPoints(points)
+        elif geomType == "line":
+            all_pts = []
+            for _, pts in saved_parts:
+                all_pts.extend(pts)
+            self._createLineFromPoints(all_pts)
             self._setPanTool()
         else:
-            self._createPolygonFromPoints(points)
+            self._createPolygonFromParts(saved_parts)
             self._setPanTool()
 
     def _onVertexSelected(self, row):
@@ -313,7 +352,7 @@ class VectorelDigitizerPro:
 
     def _onDialogEndDrawing(self):
         if self.__drawTool is not None and self.__dlgDraw is not None:
-            self.__drawTool.setPoints(self.__dlgDraw.points)
+            self.__drawTool.setPoints(self.__dlgDraw._currentPoints)
             self.__drawTool.updateRubberBand()
         if self.__drawTool is not None and self.__drawTool.isDrawing:
             self.__drawTool.endDrawing()
@@ -328,17 +367,18 @@ class VectorelDigitizerPro:
         if len(points) < minPoints:
             return
 
+        saved_points = list(points)
         self.__dlgDraw.clearPoints()
         self.__drawTool.clear()
 
-        if geomType == 'point':
-            self._createPointFromClick(points[0])
+        if geomType == "point":
+            self._createPointFromClick(saved_points[0])
             self.canvas.setMapTool(self.__drawTool)
-        elif geomType == 'line':
-            self._createLineFromPoints(points)
+        elif geomType == "line":
+            self._createLineFromPoints(saved_points)
             self._setPanTool()
         else:
-            self._createPolygonFromPoints(points)
+            self._createPolygonFromPoints(saved_points)
             self._setPanTool()
 
     def _onDrawingCanceled(self):
@@ -367,9 +407,10 @@ class VectorelDigitizerPro:
         if layer is None or not layer.isEditable():
             QMessageBox.critical(
                 self.iface.mainWindow(),
-                self.tr('Error'),
-                self.tr('Layer is not editable'),
-                QMessageBox.StandardButton.Ok)
+                self.tr("Error"),
+                self.tr("Layer is not editable"),
+                QMessageBox.StandardButton.Ok,
+            )
             return
         if len(points) < 3:
             return
@@ -382,7 +423,7 @@ class VectorelDigitizerPro:
         self.__setlayerproperties()
         self.__isEditMode = False
 
-        coord_list = [['1', []]]
+        coord_list = [["1", []]]
         for p in points:
             row = [p.x(), p.y()]
             if self.__hasZ:
@@ -394,21 +435,58 @@ class VectorelDigitizerPro:
         self.CRS = self.canvas.mapSettings().destinationCrs()
         self.createGeom(coord_list)
 
-    def _createPointFromClick(self, point):
+    def _createPolygonFromParts(self, parts):
         layer = self.canvas.currentLayer()
         if layer is None or not layer.isEditable():
             QMessageBox.critical(
                 self.iface.mainWindow(),
-                self.tr('Error'),
-                self.tr('Layer is not editable'),
-                QMessageBox.StandardButton.Ok)
+                self.tr("Error"),
+                self.tr("Layer is not editable"),
+                QMessageBox.StandardButton.Ok,
+            )
             return
 
         self.__layer = layer
         self.__setlayerproperties()
         self.__isEditMode = False
 
-        coord_list = [['1', []]]
+        coord_list = []
+        for part_num, pts in parts:
+            if len(pts) < 3:
+                continue
+            row_data = []
+            for p in pts:
+                row = [p.x(), p.y()]
+                if self.__hasZ:
+                    row.append(0.0)
+                if self.__hasM:
+                    row.append(0.0)
+                row_data.append(row)
+            if row_data:
+                coord_list.append([str(part_num), row_data])
+
+        if not coord_list:
+            return
+
+        self.CRS = self.canvas.mapSettings().destinationCrs()
+        self.createGeom(coord_list)
+
+    def _createPointFromClick(self, point):
+        layer = self.canvas.currentLayer()
+        if layer is None or not layer.isEditable():
+            QMessageBox.critical(
+                self.iface.mainWindow(),
+                self.tr("Error"),
+                self.tr("Layer is not editable"),
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+
+        self.__layer = layer
+        self.__setlayerproperties()
+        self.__isEditMode = False
+
+        coord_list = [["1", []]]
         row = [point.x(), point.y()]
         if self.__hasZ:
             row.append(0.0)
@@ -424,9 +502,10 @@ class VectorelDigitizerPro:
         if layer is None or not layer.isEditable():
             QMessageBox.critical(
                 self.iface.mainWindow(),
-                self.tr('Error'),
-                self.tr('Layer is not editable'),
-                QMessageBox.StandardButton.Ok)
+                self.tr("Error"),
+                self.tr("Layer is not editable"),
+                QMessageBox.StandardButton.Ok,
+            )
             return
         if len(points) < 2:
             return
@@ -435,7 +514,7 @@ class VectorelDigitizerPro:
         self.__setlayerproperties()
         self.__isEditMode = False
 
-        coord_list = [['1', []]]
+        coord_list = [["1", []]]
         for p in points:
             row = [p.x(), p.y()]
             if self.__hasZ:
@@ -455,7 +534,8 @@ class VectorelDigitizerPro:
     # ------------------------------------------------------------------
     def help(self):
         url = QUrl.fromLocalFile(
-            self.plugin_dir + '/help' + self.tr('/index_en.html')).toString()
+            self.plugin_dir + "/help" + self.tr("/index_en.html")
+        ).toString()
         webbrowser.open(url, new=2)
 
     # ------------------------------------------------------------------
@@ -466,21 +546,22 @@ class VectorelDigitizerPro:
         QgsApplication.restoreOverrideCursor()
         self.iface.mapCanvas().setMapTool(self.prevMapTool)
 
-        layer        = self.canvas.currentLayer()
+        layer = self.canvas.currentLayer()
         feature_list = []
 
         if layer is not None and Rectangle is not None:
             request = QgsFeatureRequest()
             request.setFilterRect(Rectangle.boundingBox())
-            request.setFlags(QgsFeatureRequest.ExactIntersect)
+            request.setFlags(QgsFeatureRequest.Flag.ExactIntersect)
             feature_list = list(layer.getFeatures(request))
 
             if len(feature_list) == 0:
                 QMessageBox.critical(
                     self.iface.mainWindow(),
-                    self.tr('Coordinate Editor – Error'),
-                    self.tr('No feature selected'),
-                    QMessageBox.StandardButton.Ok)
+                    self.tr("Coordinate Editor – Error"),
+                    self.tr("No feature selected"),
+                    QMessageBox.StandardButton.Ok,
+                )
                 self.feature_id = None
             elif len(feature_list) > 1:
                 if self.__dlgChooser is None:
@@ -489,7 +570,9 @@ class VectorelDigitizerPro:
                 self.__dlgChooser.clearControls()
                 self.__dlgChooser.configureDialog(feature_list, self.__layer)
                 if self.__dlgChooser.exec() == 1:
-                    self.feature_id = feature_list[self.__dlgChooser.selectedFeature].id()
+                    self.feature_id = feature_list[
+                        self.__dlgChooser.selectedFeature
+                    ].id()
                 else:
                     self.feature_id = None
             else:
@@ -497,7 +580,7 @@ class VectorelDigitizerPro:
 
         if self.feature_id is not None:
             Feature = layer.getFeature(self.feature_id)
-            coords  = []
+            coords = []
             self.__setlayerproperties()
             self.createCoords(coords, Feature)
 
@@ -507,13 +590,20 @@ class VectorelDigitizerPro:
                 self.__dlgEdit.returnCoordList.connect(self.createGeom)
                 self.__dlgEdit.selectedCRS.connect(self.doTransformFromCrs)
                 self.__dlgEdit.configureSignals()
-                self.__dlgEdit.setWindowTitle(self.tr('Vectorel Digitizer Pro – Edit Feature'))
+                self.__dlgEdit.setWindowTitle(
+                    self.tr("Vectorel Digitizer Pro – Edit Feature")
+                )
 
             self.__dlgEdit.clearControls()
             self.__dlgEdit.configureDialog(
-                self.__layergeometryType, self.__layerwkbType,
-                self.__isMultiType, self.__hasZ, self.__hasM,
-                self.__isEditMode, self.canvas)
+                self.__layergeometryType,
+                self.__layerwkbType,
+                self.__isMultiType,
+                self.__hasZ,
+                self.__hasM,
+                self.__isEditMode,
+                self.canvas,
+            )
             self.__dlgEdit.setValues(coords)
             self.__dlgEdit.show()
 
@@ -524,20 +614,24 @@ class VectorelDigitizerPro:
         geom = feature.geometry()
 
         if self.__layergeometryType == _PointGeometry:
-            coords.append(['1', []])
-            iterable = (geom.constParts() if self.__isMultiType else [None])
+            coords.append(["1", []])
+            iterable = geom.constParts() if self.__isMultiType else [None]
             if self.__isMultiType:
                 for part in iterable:
                     for vertex in part.vertices():
                         row = [vertex.x(), vertex.y()]
-                        if self.__hasZ: row.append(vertex.z())
-                        if self.__hasM: row.append(vertex.m())
+                        if self.__hasZ:
+                            row.append(vertex.z())
+                        if self.__hasM:
+                            row.append(vertex.m())
                         coords[0][1].append(row)
             else:
                 for vertex in geom.vertices():
                     row = [vertex.x(), vertex.y()]
-                    if self.__hasZ: row.append(vertex.z())
-                    if self.__hasM: row.append(vertex.m())
+                    if self.__hasZ:
+                        row.append(vertex.z())
+                    if self.__hasM:
+                        row.append(vertex.m())
                     coords[0][1].append(row)
 
         elif self.__layergeometryType == _LineGeometry:
@@ -545,8 +639,10 @@ class VectorelDigitizerPro:
                 coords.append([str(part_num + 1), []])
                 for vertex in part.vertices():
                     row = [vertex.x(), vertex.y()]
-                    if self.__hasZ: row.append(vertex.z())
-                    if self.__hasM: row.append(vertex.m())
+                    if self.__hasZ:
+                        row.append(vertex.z())
+                    if self.__hasM:
+                        row.append(vertex.m())
                     coords[part_num][1].append(row)
 
         elif self.__layergeometryType == _PolygonGeometry:
@@ -557,8 +653,10 @@ class VectorelDigitizerPro:
                 coords.append([str(part_num + 1), []])
                 for vertex in ring.vertices():
                     row = [vertex.x(), vertex.y()]
-                    if self.__hasZ: row.append(vertex.z())
-                    if self.__hasM: row.append(vertex.m())
+                    if self.__hasZ:
+                        row.append(vertex.z())
+                    if self.__hasM:
+                        row.append(vertex.m())
                     coords[part_num + ring_num][1].append(row)
 
                 # Remove duplicate closing vertex
@@ -573,8 +671,10 @@ class VectorelDigitizerPro:
                     coords.append([str(-(ring_num + 1)), []])
                     for vertex in ring.vertices():
                         row = [vertex.x(), vertex.y()]
-                        if self.__hasZ: row.append(vertex.z())
-                        if self.__hasM: row.append(vertex.m())
+                        if self.__hasZ:
+                            row.append(vertex.z())
+                        if self.__hasM:
+                            row.append(vertex.m())
                         coords[part_num + ring_num][1].append(row)
 
                     pl = coords[part_num + ring_num][1]
@@ -590,20 +690,23 @@ class VectorelDigitizerPro:
         self.__layer = self.canvas.currentLayer()
         if self.__layer is None:
             for action in self.actions:
-                if action.text() != self.tr('Help'):
+                if action.text() != self.tr("Help"):
                     action.setEnabled(False)
             return
 
         try:
             _vector_type = Qgis.LayerType.Vector
         except AttributeError:
-            _vector_type = QgsMapLayer.VectorLayer
+            _vector_type = QgsMapLayer.LayerType.VectorLayer
 
         if self.__layer.type() == _vector_type:
             self.__setlayerproperties()
             editing = self.__layer.isEditable()
             supported_geom = self.__layergeometryType in (
-                _PointGeometry, _LineGeometry, _PolygonGeometry)
+                _PointGeometry,
+                _LineGeometry,
+                _PolygonGeometry,
+            )
 
             if editing and supported_geom:
                 for action in self.actions:
@@ -611,20 +714,20 @@ class VectorelDigitizerPro:
                 self.__layer.editingStopped.connect(self.toggle)
                 try:
                     self.__layer.editingStarted.disconnect(self.toggle)
-                except Exception:
+                except TypeError:
                     pass
             else:
                 for action in self.actions:
-                    if action.text() != self.tr('Help'):
+                    if action.text() != self.tr("Help"):
                         action.setEnabled(False)
                 self.__layer.editingStarted.connect(self.toggle)
                 try:
                     self.__layer.editingStopped.disconnect(self.toggle)
-                except Exception:
+                except TypeError:
                     pass
         else:
             for action in self.actions:
-                if action.text() != self.tr('Help'):
+                if action.text() != self.tr("Help"):
                     action.setEnabled(False)
 
     def deactivate(self):
@@ -677,18 +780,24 @@ class VectorelDigitizerPro:
                             if int(coordsPoint[j][0]) < 0:
                                 all_inside = all(
                                     poly_geom.contains(
-                                        QgsPointXY(coordsPoint[j][1][k].x(),
-                                                   coordsPoint[j][1][k].y()))
-                                    for k in range(len(coordsPoint[j][1])))
+                                        QgsPointXY(
+                                            coordsPoint[j][1][k].x(),
+                                            coordsPoint[j][1][k].y(),
+                                        )
+                                    )
+                                    for k in range(len(coordsPoint[j][1]))
+                                )
                                 if all_inside:
                                     poly.addInteriorRing(
-                                        QgsLineString(coordsPoint[j][1]))
+                                        QgsLineString(coordsPoint[j][1])
+                                    )
                         mpoly.addGeometry(poly)
                 self.createFeature(QgsGeometry(mpoly))
             else:
                 ext_ring = next(
-                    (i for i in range(len(coordsPoint))
-                     if int(coordsPoint[i][0]) > 0), 0)
+                    (i for i in range(len(coordsPoint)) if int(coordsPoint[i][0]) > 0),
+                    0,
+                )
                 poly = QgsPolygon()
                 poly.setExteriorRing(QgsLineString(coordsPoint[ext_ring][1]))
                 poly_geom = QgsGeometry(QgsPolygon(poly))
@@ -697,18 +806,25 @@ class VectorelDigitizerPro:
                     if int(coordsPoint[i][0]) < 0:
                         all_inside = all(
                             poly_geom.contains(
-                                QgsPointXY(coordsPoint[i][1][j].x(),
-                                           coordsPoint[i][1][j].y()))
-                            for j in range(len(coordsPoint[i][1])))
+                                QgsPointXY(
+                                    coordsPoint[i][1][j].x(), coordsPoint[i][1][j].y()
+                                )
+                            )
+                            for j in range(len(coordsPoint[i][1]))
+                        )
                         if all_inside:
                             poly.addInteriorRing(QgsLineString(coordsPoint[i][1]))
                         else:
                             QMessageBox.question(
                                 self.iface.mainWindow(),
-                                self.tr('Ring not in exterior contour'),
-                                self.tr('The new geometry is not valid. '
-                                        'Do you want to use it anyway?'),
-                                QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No)
+                                self.tr("Ring not in exterior contour"),
+                                self.tr(
+                                    "The new geometry is not valid. "
+                                    "Do you want to use it anyway?"
+                                ),
+                                QMessageBox.StandardButton.Yes,
+                                QMessageBox.StandardButton.No,
+                            )
                 self.createFeature(QgsGeometry(poly))
 
     def createFeature(self, geom):
@@ -724,24 +840,25 @@ class VectorelDigitizerPro:
         else:
             reply = QMessageBox.question(
                 self.iface.mainWindow(),
-                self.tr('Feature not valid'),
-                self.tr("The new geometry is not valid. "
-                        "Do you want to use it anyway?"),
-                QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No)
+                self.tr("Feature not valid"),
+                self.tr("The new geometry is not valid. Do you want to use it anyway?"),
+                QMessageBox.StandardButton.Yes,
+                QMessageBox.StandardButton.No,
+            )
             if reply == QMessageBox.StandardButton.Yes:
                 feature.setGeometry(geom)
             else:
                 return False
 
         if not self.__isEditMode:
-            self.__layer.beginEditCommand('Feature added')
+            self.__layer.beginEditCommand("Feature added")
             self.__layer.addFeature(feature)
             if self.iface.openFeatureForm(self.__layer, feature):
                 self.__layer.endEditCommand()
             else:
                 self.__layer.destroyEditCommand()
         else:
-            self.__layer.beginEditCommand('Feature updated')
+            self.__layer.beginEditCommand("Feature updated")
             self.__layer.updateFeature(feature)
             self.__layer.endEditCommand()
 

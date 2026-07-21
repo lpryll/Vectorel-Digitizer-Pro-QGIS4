@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 
-
 def classFactory(iface):
     """Load VectorelDigitizerPro class from file vectorelDigitizerPro.
 
@@ -9,4 +8,5 @@ def classFactory(iface):
     :type iface: QgsInterface
     """
     from .vectorelDigitizerPro import VectorelDigitizerPro
+
     return VectorelDigitizerPro(iface)

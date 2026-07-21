@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
 
 
-from qgis.core import (QgsPoint, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
-                       QgsProject, QgsWkbTypes, QgsGeometry)
+from qgis.core import (
+    QgsPoint,
+    QgsCoordinateTransform,
+    QgsProject,
+    QgsWkbTypes,
+    QgsGeometry,
+)
 
 
 class ReprojectCoordinates:
-
     def __init__(self, fromCRS, toCRS, p_hasZ, p_hasM):
         self.hasZ = p_hasZ
         self.hasM = p_hasM
-        self.transformation = QgsCoordinateTransform(fromCRS, toCRS, QgsProject.instance())
+        self.transformation = QgsCoordinateTransform(
+            fromCRS, toCRS, QgsProject.instance()
+        )
 
     def copyCoordstoPoints(self, coords):
         if coords is not None:
@@ -23,17 +29,37 @@ class ReprojectCoordinates:
                 element = coords[j][1]
                 for i in range(len(element)):
                     if not (self.hasZ or self.hasM):
-                        NodePoint = QgsPoint(float(element[i][0]),
-                                             float(element[i][1]), None, None, QgsWkbTypes.Point)
+                        NodePoint = QgsPoint(
+                            float(element[i][0]),
+                            float(element[i][1]),
+                            None,
+                            None,
+                            QgsWkbTypes.Type.Point,
+                        )
                     elif self.hasZ and not self.hasM:
-                        NodePoint = QgsPoint(float(element[i][0]), float(element[i][1]), float(element[i][2]),
-                                             None, QgsWkbTypes.PointZ)
+                        NodePoint = QgsPoint(
+                            float(element[i][0]),
+                            float(element[i][1]),
+                            float(element[i][2]),
+                            None,
+                            QgsWkbTypes.Type.PointZ,
+                        )
                     elif not self.hasZ and self.hasM:
-                        NodePoint = QgsPoint(float(element[i][0]), float(element[i][1]), None,
-                                             float(element[i][2]), QgsWkbTypes.PointM)
+                        NodePoint = QgsPoint(
+                            float(element[i][0]),
+                            float(element[i][1]),
+                            None,
+                            float(element[i][2]),
+                            QgsWkbTypes.Type.PointM,
+                        )
                     else:
-                        NodePoint = QgsPoint(float(element[i][0]), float(element[i][1]), float(element[i][2]),
-                                             float(element[i][3]), QgsWkbTypes.PointZM)
+                        NodePoint = QgsPoint(
+                            float(element[i][0]),
+                            float(element[i][1]),
+                            float(element[i][2]),
+                            float(element[i][3]),
+                            QgsWkbTypes.Type.PointZM,
+                        )
 
                     coordsPoint[j][1].append(NodePoint)
 
@@ -51,12 +77,24 @@ class ReprojectCoordinates:
                     if not (self.hasZ or self.hasM):
                         f_tuple = [float(element[i].x()), float(element[i].y())]
                     elif self.hasZ and not self.hasM:
-                        f_tuple = [float(element[i].x()), float(element[i].y()), float(element[i].z())]
+                        f_tuple = [
+                            float(element[i].x()),
+                            float(element[i].y()),
+                            float(element[i].z()),
+                        ]
                     elif not self.hasZ and self.hasM:
-                        f_tuple = [float(element[i].x()), float(element[i].y()), float(element[i].m())]
+                        f_tuple = [
+                            float(element[i].x()),
+                            float(element[i].y()),
+                            float(element[i].m()),
+                        ]
                     else:
-                        f_tuple = [float(element[i].x()), float(element[i].y()), float(element[i].z()),
-                                   float(element[i].m())]
+                        f_tuple = [
+                            float(element[i].x()),
+                            float(element[i].y()),
+                            float(element[i].z()),
+                            float(element[i].m()),
+                        ]
 
                     coordsFloat[j][1].append(f_tuple)
 
@@ -69,7 +107,11 @@ class ReprojectCoordinates:
             for j in range(len(coordsPoint)):
                 element = coordsPoint[j][1]
                 for i in range(len(element)):
-                    element[i].transform(self.transformation, QgsCoordinateTransform.ForwardTransform, self.hasZ)
+                    element[i].transform(
+                        self.transformation,
+                        QgsCoordinateTransform.TransformDirection.ForwardTransform,
+                        self.hasZ,
+                    )
 
             if retQgsPoints:
                 return coordsPoint
@@ -78,5 +120,9 @@ class ReprojectCoordinates:
 
     def reprojectGeometry(self, geom: QgsGeometry) -> QgsGeometry:
         if geom is not None:
-            geom.transform(self.transformation, QgsCoordinateTransform.ForwardTransform, self.hasZ)
+            geom.transform(
+                self.transformation,
+                QgsCoordinateTransform.TransformDirection.ForwardTransform,
+                self.hasZ,
+            )
             return geom

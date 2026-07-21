@@ -3,7 +3,15 @@
 
 from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.PyQt.QtGui import QCursor, QPixmap
-from qgis.core import QgsWkbTypes, QgsGeometry, QgsProject, QgsCoordinateTransform, QgsPointXY, QgsRectangle, Qgis
+from qgis.core import (
+    QgsWkbTypes,
+    QgsGeometry,
+    QgsProject,
+    QgsCoordinateTransform,
+    QgsPointXY,
+    QgsRectangle,
+    Qgis,
+)
 from qgis.gui import QgsMapToolEmitPoint, QgsRubberBand
 
 
@@ -20,31 +28,37 @@ class FeatureFinderTool(QgsMapToolEmitPoint):
         QgsMapToolEmitPoint.__init__(self, canvas)
 
         # our own fancy cursor
-        self.cursor = QCursor(QPixmap(["16 16 3 1",
-                                         "      c None",
-                                         ".     c #FF0000",
-                                         "+     c #FFFFFF",
-                                         "                ",
-                                         "       +.+      ",
-                                         "      ++.++     ",
-                                         "     +.....+    ",
-                                         "    +.     .+   ",
-                                         "   +.   .   .+  ",
-                                         "  +.    .    .+ ",
-                                         " ++.    .    .++",
-                                         " ... ...+... ...",
-                                         " ++.    .    .++",
-                                         "  +.    .    .+ ",
-                                         "   +.   .   .+  ",
-                                         "   ++.     .+   ",
-                                         "    ++.....+    ",
-                                         "      ++.++     ",
-                                         "       +.+      "]))
+        self.cursor = QCursor(
+            QPixmap(
+                [
+                    "16 16 3 1",
+                    "      c None",
+                    ".     c #FF0000",
+                    "+     c #FFFFFF",
+                    "                ",
+                    "       +.+      ",
+                    "      ++.++     ",
+                    "     +.....+    ",
+                    "    +.     .+   ",
+                    "   +.   .   .+  ",
+                    "  +.    .    .+ ",
+                    " ++.    .    .++",
+                    " ... ...+... ...",
+                    " ++.    .    .++",
+                    "  +.    .    .+ ",
+                    "   +.   .   .+  ",
+                    "   ++.     .+   ",
+                    "    ++.....+    ",
+                    "      ++.++     ",
+                    "       +.+      ",
+                ]
+            )
+        )
 
         try:
             _poly_geom = Qgis.GeometryType.Polygon
         except AttributeError:
-            _poly_geom = QgsWkbTypes.PolygonGeometry
+            _poly_geom = QgsWkbTypes.GeometryType.PolygonGeometry
         self.rubberBand = QgsRubberBand(self.canvas, _poly_geom)
         self.rubberBand.setColor(Qt.GlobalColor.red)
         self.rubberBand.setFillColor(Qt.GlobalColor.transparent)
@@ -64,9 +78,13 @@ class FeatureFinderTool(QgsMapToolEmitPoint):
 
             crs_canvas = self.canvas.mapSettings().destinationCrs()
             layer_crs = self.canvas.currentLayer().crs()
-            xformer = QgsCoordinateTransform(crs_canvas, layer_crs, QgsProject.instance())
+            xformer = QgsCoordinateTransform(
+                crs_canvas, layer_crs, QgsProject.instance()
+            )
 
-            rect_geom.transform(xformer, QgsCoordinateTransform.ForwardTransform)
+            rect_geom.transform(
+                xformer, QgsCoordinateTransform.TransformDirection.ForwardTransform
+            )
             self.canvas.scene().removeItem(self.rubberBand)
 
             self.Clicked.emit(rect_geom)
@@ -82,7 +100,7 @@ class FeatureFinderTool(QgsMapToolEmitPoint):
         try:
             _poly_geom2 = Qgis.GeometryType.Polygon
         except AttributeError:
-            _poly_geom2 = QgsWkbTypes.PolygonGeometry
+            _poly_geom2 = QgsWkbTypes.GeometryType.PolygonGeometry
         self.rubberBand.reset(_poly_geom2)
         if startPoint.x() == endPoint.x() or startPoint.y() == endPoint.y():
             return
@@ -101,7 +119,10 @@ class FeatureFinderTool(QgsMapToolEmitPoint):
     def rectangle(self):
         if self.startPoint is None or self.endPoint is None:
             return None
-        elif self.startPoint.x() == self.endPoint.x() or self.startPoint.y() == self.endPoint.y():
+        elif (
+            self.startPoint.x() == self.endPoint.x()
+            or self.startPoint.y() == self.endPoint.y()
+        ):
             return None
 
         return QgsRectangle(self.startPoint, self.endPoint)
