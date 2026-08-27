@@ -1423,9 +1423,10 @@ class DrawingDigitizerGUI(QDialog):
         """Build a QgsPolygon for a single exterior part with its rings."""
         if len(part_entry[1]) < 3:
             return None
-        feature_pts = [
-            QgsPointXY(float(p.x()), float(p.y())) for p in part_entry[1]
-        ]
+        feature_pts = []
+        for p in part_entry[1]:
+            x, y = self._formatCoords(p)
+            feature_pts.append(QgsPointXY(x, y))
         ring = QgsLineString(feature_pts)
         ring.close()
         poly = QgsPolygon()
@@ -1433,9 +1434,10 @@ class DrawingDigitizerGUI(QDialog):
         for ring_entry in ring_entries:
             if len(ring_entry[1]) < 3:
                 continue
-            ring_pts = [
-                QgsPointXY(float(p.x()), float(p.y())) for p in ring_entry[1]
-            ]
+            ring_pts = []
+            for p in ring_entry[1]:
+                x, y = self._formatCoords(p)
+                ring_pts.append(QgsPointXY(x, y))
             interior = QgsLineString(ring_pts)
             interior.close()
             poly.addInteriorRing(interior)
@@ -1458,6 +1460,7 @@ class DrawingDigitizerGUI(QDialog):
         if not self.mapCanvas or not self.featureCrs:
             return
 
+        preview_injected = False
         try:
             da = QgsDistanceArea()
             da.setSourceCrs(
@@ -1465,6 +1468,22 @@ class DrawingDigitizerGUI(QDialog):
             )
             if self.featureCrs.isGeographic():
                 da.setEllipsoid(QgsProject.instance().ellipsoid())
+
+            # Determine which part index is the active one (for preview injection)
+            current_row = self._currentPartIndex
+            preview_ext_idx = None
+            if (
+                use_preview
+                and self._previewPt is not None
+                and 0 <= current_row < len(self.parts)
+                and self.parts[current_row][0] > 0
+            ):
+                preview_ext_idx = current_row
+
+            # Temporarily inject preview point into the current part
+            if preview_ext_idx is not None:
+                self.parts[preview_ext_idx][1].append(self._previewPt)
+                preview_injected = True
 
             # Collect exterior indices and their associated rings
             ext_indices = []
@@ -1499,7 +1518,6 @@ class DrawingDigitizerGUI(QDialog):
             self._area_total_sqm = total_area
 
             # Show current part's area
-            current_row = self._currentPartIndex
             if current_row >= 0 and current_row < len(self.parts):
                 part_num = self.parts[current_row][0]
                 if part_num > 0 and len(self.parts[current_row][1]) >= 3:
@@ -1561,6 +1579,9 @@ class DrawingDigitizerGUI(QDialog):
 
         except Exception:
             self.lblArea.setText("N/A")
+        finally:
+            if preview_injected:
+                self.parts[preview_ext_idx][1].pop()
 
     # ------------------------------------------------------------------
     # Length calculation
@@ -1592,7 +1613,7 @@ class DrawingDigitizerGUI(QDialog):
         if self.geomType != "line":
             return
         lst = list(pts)
-        if use_preview and self._previewPt and lst:
+        if use_preview and self._previewPt:
             lst = lst + [self._previewPt]
         if not self.mapCanvas or len(lst) < 2:
             return

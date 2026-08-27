@@ -4,7 +4,7 @@ qgisMinimumVersion=4.0
 qgisMaximumVersion=4.99
 description=Vectorel Digitizer Pro is a QGIS plugin for creating and editing vector features by entering, pasting or modifying numerical vertex coordinates.
  Includes a map-based polygon drawing tool with live area calculation. Also simultaneously converts coordinates according to CRS selection.
-version=2.0.6
+version=2.0.7
 author=LPRYLL
 email=alperyolal@gmail.com
 about=Vectorel Digitizer Pro adds three tools to the QGIS vector editing toolbar.
@@ -19,6 +19,7 @@ homepage=https://github.com/lpryll/Vectorel-Digitizer-Pro-QGIS4
 
 hasProcessingProvider=no
 changelog=
+ 2.0.7 - Drawing Digitizer tool spontaneous area calculation and miscalculation problems fixed.
  2.0.6 - Drawing Digitizer tool now supports multi-part drawing and ring adding. General code quality increased.
  2.0.5 - Decimal precision of coordinates are fixed to 2 digits. Copy-Paste takes exact coordinate. Some other bugs fixed.
  2.0.4 - In The Drawing Digitizer tool, license coordinates sorted clockwise, beginning from the top-right corner.
